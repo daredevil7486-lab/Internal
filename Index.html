@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Interactive Cardio/Gastro/Hemo Quiz</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 18px; background:#f6f7fb; }
+    .wrap { max-width: 900px; margin: 0 auto; background: white; padding: 18px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .topbar { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom: 10px; }
+    .badge { background:#0b63ce; color:white; padding:8px 12px; border-radius:999px; font-weight:700; }
+    h1 { font-size: 20px; margin: 0 0 12px 0; }
+    .q { font-size: 16px; font-weight: 700; margin: 12px 0; }
+    .options { display:grid; gap:10px; margin-top: 10px; }
+    .opt { padding: 12px; border: 1px solid #d9dbe7; border-radius: 10px; cursor:pointer; background:#fff; }
+    .opt.selected { border-color:#0b63ce; box-shadow: 0 0 0 3px rgba(11,99,206,0.15); }
+    .actions { display:flex; gap:10px; margin-top: 14px; flex-wrap:wrap; }
+    button {
+      border: 0; padding: 10px 14px; border-radius: 10px; cursor:pointer; font-weight:700;
+      background:#111827; color:white;
+    }
+    button.secondary { background:#e5e7eb; color:#111827; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 10px; display:none; }
+    .feedback.good { background:#eaffea; color:#0f7a1f; border:1px solid #9fe3a8; }
+    .feedback.bad { background:#ffecec; color:#8a0f0f; border:1px solid #f2a0a0; }
+    .footer { margin-top: 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#4b5563; }
+    .small { font-size: 13px; }
+    .result { display:none; }
+    .result.show { display:block; }
+    .prog { font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <span class="badge">Interactive Quiz</span>
+        <h1>Cardio / Gastro / Hematology (from your file)</h1>
+      </div>
+      <div class="prog small" id="progText">Question 1 of 27</div>
+    </div>
+
+    <div class="q" id="questionText"></div>
+
+    <div class="options" id="options"></div>
+
+    <div class="actions">
+      <button class="secondary" id="prevBtn" type="button">Previous</button>
+      <button id="checkBtn" type="button">Check Answer</button>
+      <button id="nextBtn" type="button">Next</button>
+      <button class="secondary" id="restartBtn" type="button">Restart</button>
+    </div>
+
+    <div class="feedback" id="feedbackBox"></div>
+
+    <div class="footer">
+      <div class="small">
+        <div>Tip: choose one answer, then click <b>Check Answer</b>.</div>
+      </div>
+      <div class="small">
+        Score: <b id="scoreText">0</b>
+      </div>
+    </div>
+
+    <div class="result" id="resultBox" style="margin-top:16px; padding:14px; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+      <h2 style="margin-top:0;">Quiz Finished 🎉</h2>
+      <div class="small" id="finalScore"></div>
+      <div class="small" style="margin-top:10px;" id="finalBreakdown"></div>
+    </div>
+  </div>
+
+  <script>
+    // Questions extracted from your text (27 total).
+    // Each item: question, options array, correctIndex, explanation (optional).
+    const questions = [
+      {
+        question: "A 46-year-old man has increased anginal attacks, decreased effectiveness of nitrates, and a sharp decrease in exercise tolerance. MOST probable diagnosis?",
+        options: [
+          "New-onset angina pectoris",
+          "Progressive angina pectoris",
+          "Vasospastic angina",
+          "Exertional angina",
+          "Myocardial infarction"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "Acute coronary syndrome includes:",
+        options: [
+          "Unstable angina pectoris",
+          "Atrioventricular block II degree",
+          "Angina pectoris IV functional class",
+          "Early postinfarction angina",
+          "Syncope"
+        ],
+        // In your file, unstable angina pectoris and early postinfarction angina were marked (+).
+        // This quiz supports single-choice, so we set the most clearly included one:
+        correctIndex: 0
+      },
+      {
+        question: "At what duration of an anginal attack must the doctor think about development of myocardial infarction?",
+        options: [
+          "More than 10 minutes",
+          "More than 30 minutes",
+          "More than an hour",
+          "More than a day",
+          "Less than 10 minutes"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "Typical variants of myocardial infarction include:",
+        options: ["Gastralgic", "Asthmatic", "Arrhythmic", "Cerebral", "Anginal"],
+        correctIndex: 4
+      },
+      {
+        question: "Causes of death in the acute period of myocardial infarction are:",
+        options: [
+          "Right bundle branch block",
+          "Chronic heart failure",
+          "Left bundle branch block",
+          "Myocardial rupture with tamponade",
+          "Dressler syndrome"
+        ],
+        correctIndex: 3
+      },
+      {
+        question: "What complication is more often observed in the late period of myocardial infarction?",
+        options: ["Dressler’s syndrome", "Pulmonary edema", "Acute aneurysm of the heart", "Heart breaks", "Thromboembolism"],
+        correctIndex: 0
+      },
+      {
+        question: "BP 140/90 mmHg with type 2 diabetes mellitus and diabetic nephropathy. MOST likely risk category?",
+        options: ["Low risk", "Average risk", "High risk", "Very high risk", "Does not have a risk group"],
+        correctIndex: 3
+      },
+      {
+        question: "Most informative method for diagnosing renovascular hypertension:",
+        options: ["Kidney ultrasound", "Angiography of renal vessels", "Excretory urography", "Kidney scintigraphy", "Intravenous pyelography"],
+        correctIndex: 1
+      },
+      {
+        question: "For grade 3 arterial hypertension, BP figures are characteristic:",
+        options: ["120–129 / 80–84", "130–139 / 85–89", "140–159 / 90–99", "160–179 / 100–109", "Above 180/110"],
+        correctIndex: 4
+      },
+      {
+        question: "For arterial hypertension of the 2nd degree, BP numbers are characteristic:",
+        options: ["120–129 / 80–84", "130–139 / 85–89", "140–159 / 90–99", "160–179 / 100–109", "Above 180/110"],
+        correctIndex: 3
+      },
+      {
+        question: "Indicate the duration of the PQ interval is normal:",
+        options: ["0.08–0.12 s", "0.14–0.22 s", "0.22–0.24 s", "0.04–0.08 s", "0.12–0.20 s"],
+        correctIndex: 4
+      },
+      {
+        question: "What should be the P wave normally in leads I, II, aVF, V2–V6?",
+        options: ["Positive", "Negative", "None", "Two-phase", "Amplitude of the prong above 2.5mm"],
+        correctIndex: 0
+      },
+      {
+        question: "What tooth characterizes atrial excitation?",
+        options: ["Q", "R", "S", "P", "T"],
+        correctIndex: 3
+      },
+      {
+        question: "What is the normal duration of the P wave?",
+        options: ["0.05–0.08 s", "0.08–0.10 s", "0.1–0.2 s", "0.06–0.08 s", "0.02–0.05 s"],
+        correctIndex: 1
+      },
+      {
+        question: "53-year-old: 3 months chest pain 10–15 min, more often at night/early morning; exercise well tolerated. MOST probable diagnosis?",
+        options: [
+          "Stable angina FC II",
+          "Stable angina FC III",
+          "Stable angina FC IV",
+          "Vasospastic angina",
+          "New-onset angina pectoris"
+        ],
+        correctIndex: 3
+      },
+      {
+        question: "Immediate causes of an attack of angina pectoris can be?",
+        options: ["Excitement", "Going out into the cold", "Exercise stress", "Increased blood pressure", "All of the above"],
+        correctIndex: 4
+      },
+      {
+        question: "The gold standard for the diagnosis of ischemic heart disease is:",
+        options: [
+          "EchoCG",
+          "Ventriculography",
+          "Coronary angiography",
+          "Endocardial mapping",
+          "Perfusion 2D myocardial scintigraphy with 201T1"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "A 46-year-old man with BP ~160/90, smoking, obesity, family history. What are most likely risk factors for atherosclerosis in this patient?",
+        options: [
+          "Obesity, smoking, hypercholesterolemia, men over 45",
+          "Obesity, alcohol consumption, hypercholesterolemia",
+          "Smoking, men over 40, impaired fasting blood glucose",
+          "Hypercholesterolemia, diabetes mellitus, alcohol consumption",
+          "Arterial hypertension, hypocholesterolemia, smoking"
+        ],
+        correctIndex: 0
+      },
+      {
+        question: "Pain occurs when walking 300–400 m or up 1 floor, lasts several minutes, disappears at rest and after nitroglycerin. MOST probable diagnosis?",
+        options: ["Unstable angina", "Stable angina FC I", "Stable angina FC II", "Stable angina FC III", "Stable angina FC IV"],
+        correctIndex: 3
+      },
+      {
+        question: "60-year-old sudden severe pressing pain behind sternum lasting >30 min; cold sweat; pale; troponin/myocardial markers—Which indicators on admission confirm your diagnosis?",
+        options: ["Leukocytes", "ESR", "Troponin", "AST", "Myoglobin"],
+        correctIndex: 2
+      },
+      {
+        question: "Epigastric pain with nausea/vomiting; later pain moves behind sternum to the left and extrasystole appeared. MOST probable diagnosis?",
+        options: [
+          "ACS without ST segment elevation",
+          "Unstable angina pectoris IIIB (Braunwald)",
+          "ACS with ST segment elevation",
+          "Unstable angina II B (Braunwald)",
+          "Subendocardial myocardial infarction"
+        ],
+        correctIndex: 4
+      },
+      {
+        question: "57-year-old with exertional angina; attacks more frequent; prolonged attack not stopped by nitroglycerin, cold sweat, weakness; ECG—What is MOST likely?",
+        options: [
+          "ACS without ST segment elevation",
+          "Unstable angina pectoris IIIB (Braunwald)",
+          "ACS with ST segment elevation",
+          "Unstable angina II B (Braunwald)",
+          "Subendocardial myocardial infarction"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "Shortness of breath (more horizontal), dry cough, nocturnal symptoms; muffled heart sounds; accent II on pulmonary artery; rales; edema. ECG sinus rhythm; ST on isoline; QS V1–V6; troponin 0.01. MOST likely pathology developed against background of which?",
+        options: [
+          "IHD, progressive angina pectoris",
+          "IHD, postinfarction cardiosclerosis",
+          "Arterial hypertension",
+          "IHD, acute myocardial infarction",
+          "Myocarditis"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "64-year-old: strong burning behind breastbone not controlled by nitroglycerin; severe condition after stress; ECG shows—MOST probable diagnosis?",
+        options: [
+          "Subendocardial anterior-septal-apical MI",
+          "Transmural anterior-widespread MI",
+          "Transmural anterior-septal-apical MI",
+          "Subendocardial anterior-lateral wall MI",
+          "Subendocardial anterior-widespread MI"
+        ],
+        // In your extracted text, the correct one marked (+) is transmural anterior-widespread myocardial infarction.
+        correctIndex: 1
+      },
+      {
+        question: "77-year-old: intense pressing pain >1 hour; suddenly pale, cold sweat, lost consciousness; pulse/BP not determined; ECG photo. Which complication MOST likely developed?",
+        options: [
+          "Ventricular fibrillation",
+          "Ventricular flutter",
+          "Atrial fibrillation",
+          "Complete AV block",
+          "II degree AV block"
+        ],
+        correctIndex: 0
+      },
+      {
+        question: "33-year-old woman: inspiratory dyspnea on load and horizontal position; interruptions, palpitations; history tonsillitis; murmur at apex; ECG shows—Which arrhythmia is MOST likely to complicate?",
+        options: [
+          "Atrial fibrillation",
+          "Frequent supraventricular extrasystole",
+          "Atrial paroxysmal tachycardia",
+          "Atrial flutter",
+          "Ventricular premature beats"
+        ],
+        correctIndex: 0
+      },
+      {
+        question: "25-year-old woman: sudden palpitations 30 min–1 hour, ends by itself; history viral infections; regular rhythm HR 160. MOST likely rhythm disturbance?",
+        options: [
+          "Paroxysmal ventricular tachycardia",
+          "Paroxysmal supraventricular tachycardia",
+          "Atrial flutter",
+          "Frequent supraventricular extrasystole",
+          "Severe sinus tachycardia"
+        ],
+        correctIndex: 1
+      }
+    ];
+
+    let idx = 0;
+    let selected = null;
+    let checked = false;
+    let score = 0;
+    const answered = new Array(questions.length).fill(false);
+    const correct = new Array(questions.length).fill(false);
+
+    const questionText = document.getElementById('questionText');
+    const optionsEl = document.getElementById('options');
+    const progText = document.getElementById('progText');
+    const scoreText = document.getElementById('scoreText');
+    const feedbackBox = document.getElementById('feedbackBox');
+    const finalScore = document.getElementById('finalScore');
+    const finalBreakdown = document.getElementById('finalBreakdown');
+    const resultBox = document.getElementById('resultBox');
+
+    function render() {
+      const q = questions[idx];
+      progText.textContent = `Question ${idx + 1} of ${questions.length}`;
+      questionText.textContent = q.question;
+
+      optionsEl.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = "opt" + (selected === i ? " selected" : "");
+        div.textContent = opt;
+        div.onclick = () => {
+          if (checked) return; // after checking, lock selection for that question
+          selected = i;
+          checked = false;
+          render();
+        };
+        optionsEl.appendChild(div);
+      });
+
+      feedbackBox.style.display = "none";
+      feedbackBox.className = "feedback";
+
+      // If already answered, show result styling
+      if (answered[idx]) {
+        checked = true;
+        selected = null; // keep user selection hidden
+        // show correct/incorrect feedback
+        feedbackBox.style.display = "block";
+        const isCorrect = correct[idx];
+        feedbackBox.className = "feedback " + (isCorrect ? "good" : "bad");
+        feedbackBox.textContent = isCorrect ? "Correct ✅" : `Incorrect ❌ (Correct answer: ${q.options[q.correctIndex]})`;
+
+        // highlight correct option
+        const correctOpt = q.correctIndex;
+        const optDivs = optionsEl.querySelectorAll('.opt');
+        optDivs.forEach((d, i) => {
+          if (i === correctOpt) d.classList.add('selected');
+        });
+      }
+
+      scoreText.textContent = score;
+      document.getElementById('prevBtn').disabled = idx === 0;
+      document.getElementById('nextBtn').disabled = idx === questions.length - 1;
+      document.getElementById('checkBtn').disabled = answered[idx] || selected === null;
+    }
+
+    function checkAnswer() {
+      if (answered[idx]) return;
+      if (selected === null) return;
+
+      checked = true;
+      const q = questions[idx];
+      const isCorrect = selected === q.correctIndex;
+
+      answered[idx] = true;
+      correct[idx] = isCorrect;
+
+      if (isCorrect) score += 1;
+
+      feedbackBox.style.display = "block";
+      feedbackBox.className = "feedback " + (isCorrect ? "good" : "bad");
+      feedbackBox.textContent = isCorrect ? "Correct ✅" : `Incorrect ❌ (Correct answer: ${q.options[q.correctIndex]})`;
+
+      scoreText.textContent = score;
+      document.getElementById('checkBtn').disabled = true;
+    }
+
+    function next() {
+      if (idx < questions.length - 1) {
+        idx++;
+        selected = null;
+        checked = false;
+        render();
+      } else {
+        finish();
+      }
+    }
+
+    function prev() {
+      if (idx > 0) {
+        idx--;
+        selected = null;
+        checked = false;
+        render();
+      }
+    }
+
+    function finish() {
+      let total = questions.length;
+      let percent = Math.round((score / total) * 100);
+      finalScore.textContent = `Your score: ${score} / ${total} (${percent}%)`;
+
+      let correctCount = score;
+      let wrongCount = total - correctCount;
+      finalBreakdown.textContent = `Correct: ${correctCount} | Incorrect: ${wrongCount}`;
+
+      resultBox.classList.add('show');
+    }
+
+    function restart() {
+      idx = 0;
+      selected = null;
+      checked = false;
+      score = 0;
+      for (let i = 0; i < answered.length; i++) { answered[i] = false; correct[i] = false; }
+      resultBox.classList.remove('show');
+      scoreText.textContent = "0";
+      render();
+    }
+
+    document.getElementById('checkBtn').onclick = checkAnswer;
+    document.getElementById('nextBtn').onclick = () => {
+      if (idx < questions.length - 1) {
+        // allow next only if checked or already answered
+        if (!answered[idx]) checkAnswer();
+        next();
+      } else {
+        if (!answered[idx]) checkAnswer();
+        finish();
+      }
+    };
+    document.getElementById('prevBtn').onclick = prev;
+    document.getElementById('restartBtn').onclick = restart;
+
+    render();
+  </script>
+</body>
